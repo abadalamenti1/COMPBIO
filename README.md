@@ -26,3 +26,20 @@
 - When testing predicted expression for associated traits, are new genes implicated, or were the genes previously found in European cohorts?
 
 The hope is to advance biological knowledge of the underlying mechanisms of disease risk not assessed in GWAS studies alone. PrediXcan provides direction of effect, which may yield opportunities for therapeutic development and drug targets.
+
+***Instructions***
+
+  To run our updated version of the PrediXcan pipeline for these diverse populations, you will need
+  
+  Software Requirements:
+  -Linux or Mac OS
+  -R
+  
+  Scripts:
+  -Insert script name here
+  
+  Input Files:
+  -genotype file
+  -sample file
+  -phenotype file
+  ???
