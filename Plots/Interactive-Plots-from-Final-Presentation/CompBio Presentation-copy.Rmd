@@ -1,0 +1,481 @@
+---
+title: "Presentation COMPBIO Visualization"
+author: "Shyam Shah"
+date: "May 6, 2016"
+output: ioslides_presentation
+---
+
+```{r setup, include=FALSE}
+#2 Functions to extract our results, it takes in the results as they were printed by out elastic net code
+modtable <- function(z){
+  tab <- read.table(z,stringsAsFactors=FALSE)
+  tab <- tab[-1,]
+  z1 = gsub('^.*?chr','',z)
+  chrNum = gsub('.txt','',z1)
+  tab <- cbind(tab,as.numeric(chrNum))
+}
+
+load_data <- function(expr) { 
+  dir = '/home/shyam/Documents/CompBio/Results/'
+  setwd(dir)
+  files <- dir('/home/shyam/Documents/CompBio/Results/',pattern = expr)
+  tables <- lapply(files, modtable)
+  tables <- do.call(rbind, tables)
+  tables <- cbind(tables,expr)
+  colnames(tables) = c('gene','alpha', 'cvm', 'lambda.iteration', 'lambda.min', 'n.snps', 'R2',  'pval','ChromosomeNumber','Population')
+  tables
+}
+
+#List of populations
+expList = c('CHB_p310-fold','GIH_p310-fold','JPT_p310-fold','LWK_p310-fold','MEX_p310-fold','MKK_p310-fold','YRI_p310-fold')
+
+#Using function
+k = lapply(expList, load_data)
+k1 = do.call(rbind,k)
+
+#Making r2 numeric
+k1$R2 <- as.numeric(k1$R2)
+
+library(dplyr)
+library(plotly)
+library(reshape2)
+library(GGally)
+
+#Wide Format
+w <- dcast(k1,gene+ChromosomeNumber~Population,value.var = 'R2')
+#Long Format
+l <- k1
+l$n.snps = as.numeric(l$n.snps)
+##A experiment
+# ind = which(l$R2 >= 0.1)
+# Y <- l[ind,]
+# YY <- dcast(Y,gene+ChromosomeNumber~Population,value.var = 'R2')
+# 
+# v = w
+# rownames(v) = v[,1]
+# X <- v[YY$gene,]
+# 
+# X1 = group_by(l,Population)
+# X2 = summarise(X1,
+#                su = sum(n.snps)
+#                )
+# X1 = group_by(l, gene)
+# X3 = summarise(X1,
+#                su = sum(n.snps)
+# )
+# X1 = group_by(l, gene,Population)
+# X4 = summarise(X1,
+#                su = sum(n.snps)
+# )
+
+#Replacing NA's with 0
+w[is.na(w)] <- 0
+Y1 = w
+#Compute the R2 differences
+Y1$CHBvJPT = Y1$`CHB_p310-fold` - Y1$`JPT_p310-fold`
+Y1$CHBvGIH = Y1$`CHB_p310-fold` - Y1$`GIH_p310-fold`
+Y1$CHBvJPT = Y1$`CHB_p310-fold` - Y1$`JPT_p310-fold`
+Y1$CHBvLWK = Y1$`CHB_p310-fold` - Y1$`LWK_p310-fold`
+Y1$CHBvMex = Y1$`CHB_p310-fold` - Y1$`MEX_p310-fold`
+Y1$CHBvMKK = Y1$`CHB_p310-fold` - Y1$`MKK_p310-fold`
+Y1$CHBvYRI = Y1$`CHB_p310-fold` - Y1$`YRI_p310-fold`
+
+
+Y1$GIHvJPT = w$`GIH_p310-fold` - w$`JPT_p310-fold`
+Y1$GIHvLWK = w$`GIH_p310-fold` - w$`LWK_p310-fold`
+Y1$GIHvMex = w$`GIH_p310-fold` - w$`MEX_p310-fold`
+Y1$GIHvMKK = w$`GIH_p310-fold` - w$`MKK_p310-fold`
+Y1$GIHvYRI = w$`GIH_p310-fold` - w$`YRI_p310-fold`
+
+Y1$JPTvLWK = w$`JPT_p310-fold` - w$`LWK_p310-fold`
+Y1$JPTvMex = w$`JPT_p310-fold` - w$`MEX_p310-fold`
+Y1$JPTvMKK = w$`JPT_p310-fold` - w$`MKK_p310-fold`
+Y1$JPTvYRI = w$`JPT_p310-fold` - w$`YRI_p310-fold`
+
+Y1$LWKvMex = w$`LWK_p310-fold` - w$`MEX_p310-fold`
+Y1$LWKvMKK = w$`LWK_p310-fold` - w$`MKK_p310-fold`
+Y1$LWKvYRI = w$`LWK_p310-fold` - w$`YRI_p310-fold`
+
+Y1$MexvMKK = w$`MEX_p310-fold` - w$`MKK_p310-fold`
+Y1$MexvYRI = w$`MEX_p310-fold` - w$`YRI_p310-fold`
+
+Y1$MKKvYRI = w$`MKK_p310-fold` - w$`YRI_p310-fold`
+
+##Pull out all genes which have atleast one Population with a greater than .5 R2
+Z1 = filter(Y1,Y1$`CHB_p310-fold`>=.5|Y1$`GIH_p310-fold`>=.5|Y1$`JPT_p310-fold`>=.5|Y1$`LWK_p310-fold`>=.5|Y1$`MEX_p310-fold`>=.5|Y1$`MKK_p310-fold`>=.5|Y1$`YRI_p310-fold`>=.5)
+#Quality Control
+YX = Z1[,-3:-9]
+YX = melt(YX, id = c('gene','ChromosomeNumber'))
+x = YX[1,]
+
+
+#Unefficently determining winning populations
+
+YX$WIN <- 'tie'
+dim(YX)
+for (i in 1:dim(YX)[1]) {
+  if (!is.na(YX$value[i])){
+    if (YX$value[i] > 0){
+      YX$WIN[i] = gsub('v.*','',YX$variable[i])
+    }
+    if (YX$value[i] < 0){
+      YX$WIN[i] = gsub('.*v','',YX$variable[i])
+    }
+  }
+}
+
+#extracting R2-R2 that are significant
+XZ = filter(YX,abs(value) > .2)
+```
+
+## Looking at the Population Expression Levels by Chromosome
+```{r virginiasplot, echo = FALSE,warning=FALSE}
+library(dplyr)
+#Get 3 populations
+l1 = filter(l,Population == 'CHB_p310-fold'| Population == 'GIH_p310-fold' | Population == 'JPT_p310-fold')
+qplot(ChromosomeNumber,R2,data = l1,facets = .~Population ,color = ChromosomeNumber)
+
+```
+
+## Looking at the Population Expression Levels by Chromosome
+```{r prevplotcont , echo = FALSE,warning=FALSE}
+library(dplyr)
+#Get 4 populations
+l1 = filter(l,Population == 'LWK_p310-fold'| Population == 'MEX_p310-fold' | Population == 'MKK_p310-fold' | Population == 'YRI_p310-fold')
+qplot(ChromosomeNumber,R2,data = l1,facets = .~Population ,color = ChromosomeNumber)
+
+```
+
+## Comparison of the filtered R-Sq values
+
+```{r, echo = FALSE}
+XZ = filter(YX,abs(value) > .2)
+plot_ly(XZ, x = variable,y = value,
+        #y=ChromosomeNumber,type = "scatter3d", 
+        mode = "markers", color = XZ$WIN ,marker = list(
+  size = 4), text = gene)
+  
+```
+  
+## Rsq specific plots
+```{r individual Scatter Plots,include=FALSE}
+library(ggplot2)
+library(GGally)
+trace1 <- plot_ly(w,
+  x = w$`CHB_p310-fold`,
+  y = w$`GIH_p310-fold`,
+  marker = list(
+    color = "rgb(255,0,28)",
+    size = 10
+  ), 
+  mode = "markers", 
+  
+ 
+  type = "scatter", 
+  hoverinfo = "text",
+  text = c('Gene: ',w$gene)
+)
+
+trace2 <- plot_ly(w,
+  x = w$`CHB_p310-fold`,
+  y = w$`JPT_p310-fold`,
+  marker = list(
+    color = "rgb(255,0,28)", 
+    size = 10
+  ), 
+  mode = "markers", 
+  type = "scatter", 
+  hoverinfo= "text",
+  text = c('Gene: ',w$gene)
+)
+trace3 <- plot_ly(w,
+  x = w$`CHB_p310-fold`,
+  y = w$`LWK_p310-fold`,
+  marker = list(
+    color = "rgb(255,0,28)", 
+    size = 10
+  ), 
+  mode = "markers", 
+ 
+  
+  type = "scatter", 
+  hoverinfo = "text",
+  text = c('Gene: ',w$gene)
+)
+
+trace4 <- plot_ly(w,
+  x = w$`CHB_p310-fold`,
+  y = w$`MEX_p310-fold`,
+  marker = list(
+    color = "rgb(255,0,28)",
+    size = 10
+  ), 
+  mode = "markers", 
+  
+ 
+  type = "scatter", 
+  hoverinfo = "text",
+  text = c('Gene: ',w$gene)
+)
+
+trace5 <- plot_ly(w,
+  x = w$`CHB_p310-fold`,
+  y = w$`MKK_p310-fold`,
+  marker = list(
+    color = "rgb(255,0,28)", 
+    size = 10
+  ), 
+  mode = "markers", 
+ 
+ 
+  type = "scatter", 
+  hoverinfo = "text",
+  text = c('Gene: ',w$gene)
+)
+
+trace6 <- plot_ly(w,
+  x = w$`CHB_p310-fold`,
+  y = w$`YRI_p310-fold`,
+  marker = list(
+    color = "rgb(255,0,28)", 
+    size = 10
+  ), 
+  mode = "markers", 
+  
+  
+  type = "scatter", 
+  hoverinfo = "text",
+  text = c('Gene: ',w$gene)
+)
+trace7 <- plot_ly(w,
+  x = w$`GIH_p310-fold`,
+  y = w$`JPT_p310-fold`,
+  marker = list(
+    color = "rgb(255,0,28)", 
+    size = 10
+  ), 
+  mode = "markers", 
+  
+  
+  type = "scatter", 
+  hoverinfo = "text",
+  text = c('Gene: ',w$gene)
+)
+trace8 <- plot_ly(w,
+  x = w$`GIH_p310-fold`,
+  y = w$`LWK_p310-fold`,
+  marker = list(
+    color = "rgb(255,0,28)", 
+    size = 10
+  ), 
+  mode = "markers", 
+  
+  
+  type = "scatter", 
+  hoverinfo = "text",
+  text = c('Gene: ',w$gene)
+)
+trace9 <- plot_ly(w,
+  x = w$`GIH_p310-fold`,
+  y = w$`MEX_p310-fold`,
+  marker = list(
+    color = "rgb(255,0,28)", 
+    size = 10
+  ), 
+  mode = "markers", 
+  
+  
+  type = "scatter", 
+  hoverinfo = "text",
+  text = c('Gene: ',w$gene)
+)
+trace10 <- plot_ly(w,
+  x = w$`GIH_p310-fold`,
+  y = w$`MKK_p310-fold`,
+  marker = list(
+    color = "rgb(255,0,28)", 
+    size = 10
+  ), 
+  mode = "markers", 
+  
+  
+  type = "scatter", 
+  hoverinfo = "text",
+  text = c('Gene: ',w$gene)
+)
+trace11 <- plot_ly(w,
+  x = w$`GIH_p310-fold`,
+  y = w$`YRI_p310-fold`,
+  marker = list(
+    color = "rgb(255,0,28)", 
+    size = 10
+  ), 
+  mode = "markers", 
+  
+  
+  type = "scatter", 
+  hoverinfo = "text",
+  text = c('Gene: ',w$gene)
+)
+trace12 <- plot_ly(w,
+  x = w$`JPT_p310-fold`,
+  y = w$`LWK_p310-fold`,
+  marker = list(
+    color = "rgb(255,0,28)", 
+    size = 10
+  ), 
+  mode = "markers", 
+  
+  
+  type = "scatter", 
+  hoverinfo = "text",
+  text = c('Gene: ',w$gene)
+)
+trace13 <- plot_ly(w,
+  x = w$`JPT_p310-fold`,
+  y = w$`MEX_p310-fold`,
+  marker = list(
+    color = "rgb(255,0,28)", 
+    size = 10
+  ), 
+  mode = "markers", 
+  
+  
+  type = "scatter", 
+  hoverinfo = "text",
+  text = c('Gene: ',w$gene)
+)
+trace14 <- plot_ly(w,
+  x = w$`JPT_p310-fold`,
+  y = w$`MKK_p310-fold`,
+  marker = list(
+    color = "rgb(255,0,28)", 
+    size = 10
+  ), 
+  mode = "markers", 
+  
+  
+  type = "scatter", 
+  hoverinfo = "text",
+  text = c('Gene: ',w$gene)
+)
+trace15 <- plot_ly(w,
+  x = w$`JPT_p310-fold`,
+  y = w$`YRI_p310-fold`,
+  marker = list(
+    color = "rgb(255,0,28)", 
+    size = 10
+  ), 
+  mode = "markers", 
+  
+  
+  type = "scatter", 
+  hoverinfo = "text",
+  text = c('Gene: ',w$gene)
+)
+trace16 <- plot_ly(w,
+  x = w$`LWK_p310-fold`,
+  y = w$`MEX_p310-fold`,
+  marker = list(
+    color = "rgb(255,0,28)", 
+    size = 10
+  ), 
+  mode = "markers", 
+  
+  
+  type = "scatter", 
+  hoverinfo = "text",
+  text = c('Gene: ',w$gene)
+)
+trace17 <- plot_ly(w,
+  x = w$`LWK_p310-fold`,
+  y = w$`MKK_p310-fold`,
+  marker = list(
+    color = "rgb(255,0,28)", 
+    size = 10
+  ), 
+  mode = "markers", 
+  
+  
+  type = "scatter", 
+  hoverinfo = "text",
+  text = c('Gene: ',w$gene)
+)
+trace18 <- plot_ly(w,
+  x = w$`LWK_p310-fold`,
+  y = w$`YRI_p310-fold`,
+  marker = list(
+    color = "rgb(255,0,28)", 
+    size = 10
+  ), 
+  mode = "markers", 
+  
+  
+  type = "scatter", 
+  hoverinfo = "text",
+  text = c('Gene: ',w$gene)
+)
+trace19 <- plot_ly(w,
+  x = w$`MEX_p310-fold`,
+  y = w$`MKK_p310-fold`,
+  marker = list(
+    color = "rgb(255,0,28)", 
+    size = 10
+  ), 
+  mode = "markers", 
+  
+  
+  type = "scatter", 
+  hoverinfo = "text",
+  text = c('Gene: ',w$gene)
+)
+trace20 <- plot_ly(w,
+  x = w$`MEX_p310-fold`,
+  y = w$`YRI_p310-fold`,
+  marker = list(
+    color = "rgb(255,0,28)", 
+    size = 10
+  ), 
+  mode = "markers", 
+  
+  
+  type = "scatter", 
+  hoverinfo = "text",
+  text = c('Gene: ',w$gene)
+)
+trace21 <- plot_ly(w,
+   x = w$`MKK_p310-fold`,
+   y = w$`YRI_p310-fold`,
+   marker = list(
+     color = "rgb(255,0,28)", 
+     size = 10
+   ), 
+   mode = "markers", 
+                    
+                    
+   type = "scatter", 
+   hoverinfo = "text",
+   text = c('Gene: ',w$gene)
+)
+
+```
+```{r ScatterMatrix,echo=FALSE,warning=FALSE}
+ggscatmat(w,columns = 3:9)
+```
+  
+##CHB vs. JPT
+```{r,echo=FALSE}
+trace2
+```
+  
+##MEX vs. YRI
+```{r,echo=FALSE}
+trace20
+```  
+  
+##YRI vs. MKK
+```{r,echo=FALSE}
+trace12
+```
+
+
