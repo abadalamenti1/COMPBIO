@@ -31,48 +31,49 @@ The hope is to advance biological knowledge of the underlying mechanisms of dise
 
   To run our updated version of the PrediXcan pipeline for these diverse populations, you will need
   
-  Software Requirements:  
-  -Linux or Mac OS  
-  -R  
-    -Specific R packages:  
-      glmnet  
-      data.table  
-      plotly  
-      dply  
-      ggplot2  
-      GGally  
-      RMarkdown  
-      Plus all dependencies of aforementioned packages.  
-    
-  Input Files:   
-    -Expression data matrix in the form of:  
-    Columns are the snp ids  
-    each row is the illumina/gene id  
-    with our data we also had an extra row at the beginning  
-    In our functionality/example code, we used the file:  
-    expression Data/GIH_p3_expression.txt  
-    please use this as a reference  
-    - Gene annotation file with the following columns  
-    id entrez ensembl ref chromosome start stop    
+  Software Requirements:
+  - Linux or Mac OS  
+  - R
+    - Specific R packages: 
+       - glmnet  
+       - data.table  
+       - plotly  
+       - dply  
+       - ggplot2  
+       - GGally  
+       - RMarkdown  
+       Plus all dependencies of aforementioned packages.  
+
+Input Files:   
+- Expression data matrix in the form of:
+  - Columns are the SNP Illumina IDs  
+  - Each row is the illumina/gene id  
+  - With our data we also had an extra row at the beginning  
+In our functionality/example code, we used the file:
+*Expression Data/GIH_p3_expression.txt* (Please use this as a reference)  
+
+- Gene annotation file with the following columns:
+
+ ```
+  id entrez ensembl ref chromosome start stop  
+  ```
     In our code we used the file:  
-    output.csv  
-    please use this as a reference  
+    *output.csv* (Please use this as a reference)  
   
-  -The bvm and fam files, please use the following files as guides:  
-    hapmap3_r2_b36_fwd.consensus.qc.poly.bim  
-    hapmap3_r2_b36_fwd.consensus.qc.poly.fam  
+- The .bvm and .fam files, please use the following files as guides:  
+    *hapmap3_r2_b36_fwd.consensus.qc.poly.bim*  
+    *hapmap3_r2_b36_fwd.consensus.qc.poly.fam*  
   
-  -The SNP files in raw format, please use the following file as a guide:  
-    'Chromosomes/Chr21.raw'  
+- The SNP files in raw format, please use the following file as a guide:  
+    *Chromosomes/Chr21.raw*  
+  - Since the snp files we used were not properly annotated, we had to impute missing values which may not be necessary for fully fitted data.
+  - Remember to change the directory, with the dir variable at the top.
   
-  Since the snp files we used were not properly annotated, we had to impute missing values which may not be necessary for fully fitted data.
-  Remember to change the directory, with the dir variable at the top
+Example Run:  
+  - You can do an example run using the Functionality Test.R code
+  - The files needed will be in the example run code file
   
-  Example Run:  
-  -You can do an example run using the Functionality Test.R code
-  -The files needed will be in the example run code file
-  
-  Output Files & Analysis:  
+Output Files & Analysis:  
   - We have included the full results of our code on our github, under the results folder    
   - The visualization code is done in rmarkdown, and is the rmd file in the Results/Graphs (HTML included)  
   - Some of the plots in our powerpoint/paper were done in the Plotly browser due to some glitches with R 
